@@ -62,29 +62,32 @@ wsServer.on('connection', (ws, req) => {
   ws.on('message', async (msg) => {
   
    // const { file } = msg.files;
-   ws.send(msg);
+ //  ws.send(msg);
      const  file = msg;
+     file.name = 'name';
     //  ws.send(msg);
 
       console.log(msg);
       
-      const link = await new Promise((resolve, reject) => {
-        const oldPath = file.path;
-        console.log(oldPath);
-        const filename = uuid.v4();
-        const newPath = path.join(publ, filename);
-        const callback = error => reject(error);
-        const readStream = fs.createReadStream(oldPath);
-        const writeStream = fs.createWriteStream(newPath);
-        readStream.on('error', callback);
-        writeStream.on('error', callback);
-        readStream.on('close', () => {
-          console.log('close');
-        //  fs.unlink(oldPath, callback);
-          resolve(filename);
+      try {
+        const link = await new Promise((resolve, reject) => {
+          const filename = uuid.v4();
+          const newPath = path.join(publ, filename);
+          console.log(newPath);
+          fs.writeFile(newPath, file, (err) => {
+            if (err) {
+              console.log(err);
+              reject(err);
+              return;
+            }
+  
+            resolve(filename);
+          });
+          ws.send(filename);
         });
-        readStream.pipe(writeStream);
-      });
+      } catch (e) {
+        console.log(e);
+      }
     //  ctx.response.body = link;
     //  catalog = fs.readdirSync(publ);
     
