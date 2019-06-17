@@ -11,7 +11,7 @@ const WS = require('ws');
 
 const app = new Koa();
 const server = http.createServer(app.callback());
-const port = process.env.PORT || 7075;
+const port = process.env.PORT || 7070;
 const publ = path.join(__dirname, '/public');
 const koaStatic = require('koa-static');
 
@@ -75,33 +75,91 @@ wsServer.on('connection', (ws, req) => {
   
   ws.on('message', async (msg) => {
   
-  // const { file } = msg.files;
+   // const { file } = msg.files;
  //  ws.send(msg);
- const  file = msg;
- file.name = 'name';
-//  ws.send(msg);
+     const  file = msg;
+     file.name = 'name';
+    //  ws.send(msg);
 
-  console.log(msg);
+      console.log(msg);
+      
+      try {
+        const link = await new Promise((resolve, reject) => {
+          const filename = uuid.v4();
+          const newPath = path.join(publ, filename);
+          console.log(newPath);
+          fs.writeFile(newPath, file, (err) => {
+            if (err) {
+              console.log(err);
+              reject(err);
+              return;
+            }
   
-  try {
-    const link = await new Promise((resolve, reject) => {
-      const filename = uuid.v4();
-      const newPath = path.join(publ, filename);
-      console.log(newPath);
-      fs.writeFile(newPath, file, (err) => {
-        if (err) {
-          console.log(err);
-          reject(err);
-          return;
-        }
+            resolve(filename);
+          });
+          ws.send(filename);
+        });
+      } catch (e) {
+        console.log(e);
+      }
+    //  ctx.response.body = link;
+    //  catalog = fs.readdirSync(publ);
+    
 
-        resolve(filename);
-      });
-      ws.send(filename);
-    });
-  } catch (e) {
-    console.log(e);
-  }
+
+
+
+
+
+
+
+
+
+
+   // const message = JSON.parse(msg);
+  //  console.log(msg);
+/*     if (message.type === 'input') {
+      if (names.indexOf(message.name) > -1) {
+        ws.send(JSON.stringify({
+          type: 'input',
+          name: true,
+        }));
+      } else {
+        ws.send(JSON.stringify({
+          type: 'input',
+          name: false,
+        }));
+      }
+    } else if (message.type === 'registration') {
+      names.push(message.name);
+      console.log(names);
+      ws.send(JSON.stringify({
+        type: 'input',
+        name: true,
+      }));
+    } else if (message.type === 'message') {
+      const time = moment().format('hh:mm:ss DD.MM.YY');
+      message.time = String(time);
+      messages.push(message);
+
+      Array.from(wsServer.clients)
+        .filter(o => o.readyState === WS.OPEN)
+        .forEach(o => o.send(JSON.stringify(message)));
+    } else if (message.type === 'messageAll') {
+      ws.send(JSON.stringify({
+        type: 'messageAll',
+        message: messages,
+      }));
+    } else if (message.type === 'online') {
+      online.push(message.name);
+    } */
+ //   console.log(msg);
+   //console.log(msg.name);
+
+    /*  Array.from(wsServer.clients)
+  .filter(o => o.readyState === WS.OPEN)
+  .forEach(o => o.send('some message')); */
+
 
     // ws.send('response', errCallback);
   });
