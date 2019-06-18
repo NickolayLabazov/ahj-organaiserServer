@@ -74,15 +74,69 @@ wsServer.on('connection', (ws, req) => {
 
   
   ws.on('message', async (msg) => {
-  
-  // const { file } = msg.files;
- //  ws.send(msg);
- const  file = msg;
- file.name = 'name';
-//  ws.send(msg);
 
-  console.log(msg);
+
+    let load = false;
+    let loadFile = {name: '', blobType: '', type: 'loadEnd'};
+    let file = null;
+
+    
+    let message = {type: null};
+    try{
+      message = JSON.parse(msg);
+    } catch(e){
+      file = msg;
+      
+    }
+    
+     console.log(msg);
+   
+   
+   
+   
+    if (message.type === 'message') {
+      const time = moment().format('hh:mm:ss DD.MM.YY');
+      message.time = String(time);
+      messages.push(message);
+      Array.from(wsServer.clients)
+        .filter(o => o.readyState === WS.OPEN)
+        .forEach(o => o.send(JSON.stringify(message)));
+    } else if(message.type === 'loadStart'){
+      loadFile.blobType = message.blobType;
+      loadFile.name = uuid.v4();
+      load = true;
+      ws.send(JSON.stringify({type: 'loadStart', status: 'ok'}));
+    }
+
+
+if(load){
+  try {
+    const link = await new Promise((resolve, reject) => {
+    //  const filename = uuid.v4();
+    const filename =  loadFile.name;
+      const newPath = path.join(publ, filename);
+      console.log(newPath);
+      fs.writeFile(newPath, file, (err) => {
+        if (err) {
+          console.log(err);
+          reject(err);
+          return;
+        }
+
+        resolve(filename);
+      });
+      ws.send(JSON.stringify(loadFile));
+    });
+  } catch (e) {
+    console.log(e);
+  } 
+}
+
+
   
+ 
+/*  const  file = msg;
+ 
   try {
     const link = await new Promise((resolve, reject) => {
       const filename = uuid.v4();
@@ -101,7 +155,7 @@ wsServer.on('connection', (ws, req) => {
     });
   } catch (e) {
     console.log(e);
-  }
+  } */
 
     // ws.send('response', errCallback);
   });
@@ -109,53 +163,5 @@ wsServer.on('connection', (ws, req) => {
 });
 
 
-/* app.use(koaBody({
-  urlencoded: true,
-  multipart: true,
-})); */
-
-/* app.use(koaStatic(publ));
-
-let catalog = fs.readdirSync(publ);
-
-app.use(async (ctx) => {
-  ctx.response.set({
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': ['DELETE', 'PUT', 'PATCH'],
-  });
-  if (ctx.request.method === 'OPTIONS') {
-    ctx.response.body = '';
-  }
-
-  if (ctx.request.method === 'DELETE') {
-    const name = ctx.request.querystring;
-    fs.unlinkSync(`./public/${name}`);
-    catalog = fs.readdirSync(publ);
-    ctx.response.status = 200;
-  } else if (ctx.request.method === 'GET') {
-    ctx.response.body = JSON.stringify(catalog);
-  } else if (ctx.request.method === 'POST') {
-    const { file } = ctx.request.files;
-    console.log(ctx.request.files);
-    const link = await new Promise((resolve, reject) => {
-      const oldPath = file.path;
-      const filename = uuid.v4();
-      const newPath = path.join(publ, filename);
-      const callback = error => reject(error);
-      const readStream = fs.createReadStream(oldPath);
-      const writeStream = fs.createWriteStream(newPath);
-      readStream.on('error', callback);
-      writeStream.on('error', callback);
-      readStream.on('close', () => {
-        console.log('close');
-        fs.unlink(oldPath, callback);
-        resolve(filename);
-      });
-      readStream.pipe(writeStream);
-    });
-    ctx.response.body = link;
-    catalog = fs.readdirSync(publ);
-  }
-}); */
 
 server.listen(port);
