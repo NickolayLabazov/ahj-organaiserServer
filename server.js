@@ -60,6 +60,27 @@ app.use(async (ctx, next) => {
 });
 
 
+//let messageObj = {name: '', type: 'messageEnd', time: null, text: '', load: []};
+class MessageObg{
+  constructor(name, time, text){
+    this.name = name;
+    this.type = 'messageEnd';
+    this.time = time;
+    this.text = text;
+    this.load = [];
+  }
+}
+
+class LoadFile{
+  constructor(name, blobType){
+    this.name = name;
+    this.type = 'loadEnd';
+    this.blobType = blobType;
+    
+  }
+}
+let loadFile = null;
+
 
 const messages = [];
 const names = [];
@@ -74,19 +95,17 @@ wsServer.on('connection', (ws, req) => {
 
   
   let load = false;
-  let loadFile = {name: '', blobType: '', type: 'loadEnd'};
+  let transmission = false;
+  
   let file = null;
+  let messageObj = null;
 
 
-  ws.on('message', async (msg) => {
-
-
-   // let load = false;
-   // let loadFile = {name: '', blobType: '', type: 'loadEnd'};
-   // let file = null;
+  ws.on('message', async (msg) => {   
 
     
     let message = {type: null};
+   
     try{
       message = JSON.parse(msg);
     } catch(e){
@@ -96,70 +115,44 @@ wsServer.on('connection', (ws, req) => {
     
      console.log(msg);
 
-     if (message.type === 'loadEnd') {
-      load = false;
-      const time = moment().format('hh:mm:ss DD.MM.YY');
-      loadFile.time = time;
+     if (message.type === 'messageStart') {
+      messageObj = new MessageObg(uuid.v4(), String(moment().format('hh:mm:ss DD.MM.YY')), message.text);
+      ws.send(JSON.stringify({type: 'messageStart', status: 'ok'}));     
+      transmission = true;
+     /*  messages.push(message);
       Array.from(wsServer.clients)
         .filter(o => o.readyState === WS.OPEN)
-        .forEach(o => o.send(JSON.stringify(loadFile)));
-    }
-   
-     if(load){
+        .forEach(o => o.send(JSON.stringify(message)));*/
+    } 
 
-      console.log(load)
-    
-      try {
-        const link = await new Promise((resolve, reject) => {
-          console.log('1');
-        //  const filename = uuid.v4();
-        const filename =  loadFile.name;
-          const newPath = path.join(publ, filename);
-          console.log(loadFile.name);
-          console.log(newPath);
-         // fs.writeFile(newPath, file, (err) => {
-            fs.appendFileSync(newPath, file, (err) => {
-            if (err) {
-              console.log(err);
-              reject(err);
-              return;
-            }
-    
-            resolve(filename);
-          });
-          console.log('3');
-          ws.send(JSON.stringify({type: 'load', status: 'ok'}));
-         // ws.send(JSON.stringify(loadFile));
-          load = false
-        });
-      } catch (e) {
-        console.log(e);
-      } 
-    }
-   
-   
-    if (message.type === 'message') {
-      const time = moment().format('hh:mm:ss DD.MM.YY');
-      message.time = String(time);
-      messages.push(message);
-      Array.from(wsServer.clients)
-        .filter(o => o.readyState === WS.OPEN)
-        .forEach(o => o.send(JSON.stringify(message)));
-    } else if(message.type === 'loadStart'){
-      loadFile.blobType = message.blobType;
-      loadFile.name = uuid.v4();
-      console.log(loadFile.name);
-      load = true;
-      ws.send(JSON.stringify({type: 'loadStart', status: 'ok'}));
-    /*   const link = await new Promise((resolve, reject) => {
+
+
+if(transmission){
+  if (message.type === 'loadEnd') {
+    load = false;
+    messageObj.load.push(loadFile);
+    ws.send(JSON.stringify({type: 'loadEnd', status: 'ok'}));
+  //  const time = moment().format('hh:mm:ss DD.MM.YY');
+  //  loadFile.time = time;
+   /*  Array.from(wsServer.clients)
+      .filter(o => o.readyState === WS.OPEN)
+      .forEach(o => o.send(JSON.stringify(loadFile))); */
+  }
+ 
+   if(load){
+
+    console.log(load)
+  
+    try {
+      const link = await new Promise((resolve, reject) => {
         console.log('1');
       //  const filename = uuid.v4();
       const filename =  loadFile.name;
         const newPath = path.join(publ, filename);
         console.log(loadFile.name);
         console.log(newPath);
-        fs.writeFile(newPath, file, (err) => {
-         // fs.appendFile(newPath, file, (err) => {
+       // fs.writeFile(newPath, file, (err) => {
+          fs.appendFileSync(newPath, file, (err) => {
           if (err) {
             console.log(err);
             reject(err);
@@ -169,43 +162,39 @@ wsServer.on('connection', (ws, req) => {
           resolve(filename);
         });
         console.log('3');
-        ws.send(JSON.stringify({type: 'loadStart', status: 'ok'}));
+        ws.send(JSON.stringify({type: 'load', status: 'ok'}));
        // ws.send(JSON.stringify(loadFile));
-       // load = false
-      }); */
-    }
-    console.log(loadFile.name);
-
-
-
-
-  
- 
-/*  const  file = msg;
- 
-  try {
-    const link = await new Promise((resolve, reject) => {
-      const filename = uuid.v4();
-      const newPath = path.join(publ, filename);
-      console.log(newPath);
-      fs.writeFile(newPath, file, (err) => {
-        if (err) {
-          console.log(err);
-          reject(err);
-          return;
-        }
-
-        resolve(filename);
+        load = false
       });
-      ws.send(filename);
-    });
-  } catch (e) {
-    console.log(e);
-  } */
+    } catch (e) {
+      console.log(e);
+    } 
+  }
+ 
+ 
+  if (message.type === 'messageEnd') {
+    transmission = false;
 
-    // ws.send('response', errCallback);
+    Array.from(wsServer.clients)
+      .filter(o => o.readyState === WS.OPEN)
+      .forEach(o => o.send(JSON.stringify({type: 'messageEnd', content: messageObj})));
+  } else if(message.type === 'loadStart'){
+    //loadFile.blobType = message.blobType;
+    //loadFile.name = uuid.v4();
+    loadFile = new LoadFile(uuid.v4(), message.blobType);
+    console.log(loadFile.name);
+    load = true;
+    ws.send(JSON.stringify({type: 'loadStart', status: 'ok'})); 
+  }
+}
+
+
+
+
+
+
+    console.log(loadFile.name); 
   });
-//  ws.send('welcome', errCallback);
 });
 
 
