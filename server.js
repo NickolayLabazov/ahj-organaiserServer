@@ -72,10 +72,11 @@ class MessageObg{
 }
 
 class LoadFile{
-  constructor(name, blobType){
+  constructor(name, blobType, blobName){
     this.name = name;
     this.type = 'loadEnd';
     this.blobType = blobType;
+    this.blobName = blobName;
     
   }
 }
@@ -181,9 +182,10 @@ if(transmission){
   } else if(message.type === 'loadStart'){
     //loadFile.blobType = message.blobType;
     //loadFile.name = uuid.v4();
-    loadFile = new LoadFile(uuid.v4(), message.blobType);
+    loadFile = new LoadFile(uuid.v4(), message.blobType, message.blobName);
     console.log(loadFile.name);
     load = true;
+
     ws.send(JSON.stringify({type: 'loadStart', status: 'ok'})); 
   }
 }
